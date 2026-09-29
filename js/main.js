@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initHouseRulesModal();
   initBackToTop();
   initFloatingWhatsApp();
+  initMobileBottomBar();
   initYear();
 });
 
@@ -108,18 +109,30 @@ function initMobileDrawer() {
   function openDrawer() {
     drawer.classList.add('open');
     backdrop.classList.add('open');
+    menuBtn.classList.add('active');
     menuBtn.setAttribute('aria-expanded', 'true');
+    drawer.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
   }
 
   function closeDrawer() {
     drawer.classList.remove('open');
     backdrop.classList.remove('open');
+    menuBtn.classList.remove('active');
     menuBtn.setAttribute('aria-expanded', 'false');
+    drawer.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
   }
 
-  menuBtn.addEventListener('click', openDrawer);
+  function toggleDrawer() {
+    if (drawer.classList.contains('open')) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  }
+
+  menuBtn.addEventListener('click', toggleDrawer);
   if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
   backdrop.addEventListener('click', closeDrawer);
 
@@ -132,6 +145,27 @@ function initMobileDrawer() {
       closeDrawer();
     }
   });
+
+  // Touch swipe to close drawer (swipe right towards edge)
+  let touchStartX = 0;
+  let touchCurrentX = 0;
+
+  drawer.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  drawer.addEventListener('touchmove', (e) => {
+    touchCurrentX = e.touches[0].clientX;
+  }, { passive: true });
+
+  drawer.addEventListener('touchend', () => {
+    // If swiped right by more than 50px
+    if (touchCurrentX - touchStartX > 50 && touchStartX > 0) {
+      closeDrawer();
+    }
+    touchStartX = 0;
+    touchCurrentX = 0;
+  }, { passive: true });
 }
 
 /* --- 4. ScrollSpy Navigation Highlighting --- */
@@ -487,6 +521,28 @@ function initGalleryFilterAndLightbox() {
     if (e.key === 'ArrowLeft') openLightbox(currentGalleryIndex - 1);
     if (e.key === 'ArrowRight') openLightbox(currentGalleryIndex + 1);
   });
+
+  // Mobile swipe gestures for lightbox
+  let lbTouchStartX = 0;
+  let lbTouchEndX = 0;
+
+  lightbox.addEventListener('touchstart', (e) => {
+    lbTouchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  lightbox.addEventListener('touchend', (e) => {
+    lbTouchEndX = e.changedTouches[0].screenX;
+    const diff = lbTouchStartX - lbTouchEndX;
+    if (Math.abs(diff) > 45) {
+      if (diff > 0) {
+        // Swiped left -> Next photo
+        openLightbox(currentGalleryIndex + 1);
+      } else {
+        // Swiped right -> Prev photo
+        openLightbox(currentGalleryIndex - 1);
+      }
+    }
+  }, { passive: true });
 }
 
 /* --- 9. Direct Booking Form Handling & WhatsApp Generator --- */
@@ -681,4 +737,38 @@ function initYear() {
   if (yearElem) {
     yearElem.textContent = new Date().getFullYear();
   }
+}
+
+/* --- 15. Mobile Sticky Bottom Bar Controller --- */
+function initMobileBottomBar() {
+  const bar = document.getElementById('mobileBottomBar');
+  const bookBtn = document.getElementById('mobileBarBookBtn');
+  if (!bar) return;
+
+  if (bookBtn) {
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const bookingSec = document.getElementById('booking-section');
+      if (bookingSec) {
+        bookingSec.scrollIntoView({ behavior: 'smooth' });
+        const nameInput = document.getElementById('formFullName');
+        if (nameInput) setTimeout(() => nameInput.focus(), 600);
+      }
+    });
+  }
+
+  // Show bottom bar after scrolling past top hero fold
+  function handleBarScroll() {
+    if (window.innerWidth <= 768) {
+      if (window.scrollY > 80) {
+        bar.classList.add('visible');
+      } else {
+        bar.classList.remove('visible');
+      }
+    }
+  }
+
+  window.addEventListener('scroll', handleBarScroll, { passive: true });
+  window.addEventListener('resize', handleBarScroll, { passive: true });
+  handleBarScroll();
 }
